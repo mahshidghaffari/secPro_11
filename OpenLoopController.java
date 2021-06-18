@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import reviewed.Vector2d;
 import reviewed.landingsimulatorresult.StateLanding;
 
-public class OpenLoop {
+public class OpenLoopController {
     //initial U and V
     private double uForce = 2;
     private double vForce = 0.25; 
