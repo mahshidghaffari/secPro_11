@@ -1,81 +1,137 @@
-package work.in.progress.landingStuff;
+package titan.ode;
 
-import java.util.ArrayList;
-
-import reviewed.Vector2d;
-import reviewed.landingsimulatorresult.StateLanding;
+import titan.mathematical.structures.Vector3d;
 
 public class OpenLoopController {
-    //initial U and V
-    private double uForce = 2;
-    private double vForce = 0.25; 
+
+    private Vector3d CurrentPos;
+    private Vector3d CurrentVel;
+    private Vector3d CurrentAcce;
+
+    private double uForce = 5;
+    private double vForce = 1;
+
+    private double timeStep = 0.0002;
+
     private double u;
     private double v;
-    private ArrayList<Double> us;
-    private ArrayList<Double> vs;
 
-    // initial currnet Tetta and require Tetta
-    private double tetta;
-    private double reqTetta;
+    private static final double g = 1.352;
 
-    //time
-    private ArrayList<Double> times;
-    private double timeStep = 0.1;
-
-    // position and velocity and ...
-    private Vector2d currentPos;
-    private Vector2d currentVel;
-    private Vector2d currentAcc;
-
-    private double distance;
-   
-    private double LandingHeight = 1000;
-    private Vector2d initialLandingPos = new Vector2d(0,LandingHeight);
-    
-    public void landWithUandV (StateLanding state){
-        currentPos = state.getPosition();
-        currentVel = state.getVelocity();
-        currentAcc = new Vector2d();
-    }
-
-
-    public Vector2d[] lanndingMain(){
-        boolean moving = false;
-        reqTetta = currentPos.angle(initialLandingPos);
-        moving = true;
+    public OpenController(Vector3d position, Vector3d velocity, Vector3d acceleration) {
+        this.CurrentVel = velocity;
+        this.CurrentAcce = acceleration;
+        this.CurrentPos = position;
+        double angle = Math.acos(g / uForce);//old
+        boolean speedUp = true;
         u = uForce;
+        rotationState(angle, speedUp);
+        v = 0;
+        setAcc();
+        //old
+        double timeNeeded = (-CurrentVel.getX()
+                - Math.sqrt(Math.pow(CurrentVel.getX(), 2) - 2 * CurrentAcce.getX() * CurrentPos.getX() / 2)) / CurrentAcce.getX();
 
+        for (double i = 0; i <= timeNeeded; i += timeStep) {
+            update();
+        }
+        speedUp = false;
+        u = uForce;
+        rotationState(-angle, speedUp);
+        v = 0;
+        setAcc();
+        u = uForce;
+        rotationState(-angle, speedUp);
+        v = 0;
+        setAcc();
+        //old
+        double tReq = Math.abs(CurrentPos.getX() / (0.5 * CurrentVel.getX()));
+        double accReq = -(CurrentVel.getX() / tReq);
+        double uReq = Math.abs(accReq / Math.sin(CurrentPos.getZ()));
 
+        u = uReq;
+        setAcc();
 
-        return null;
+        for (double i = 0; i <= tReq; i += timeStep) {
+            update();
+        }
+        u = 0;
+        rotationState(angle, speedUp);
+        v = 0;
+        setAcc();
+        fallDown();
+
     }
 
-    public void rotation(double reqTetta){
+    public void rotationState(double reqTheta, boolean speedUp) {
 
-        if(currentPos.getX()>0){
-            v = -vForce;
-        }else{
-            v = vForce; 
+        if (speedUp) {
+            if (CurrentPos.getX() > 0)
+                v = -vForce;
+            else
+                v = vForce;
         }
 
-        times.add(Math.abs(reqTetta)/Math.abs(v));
-        
-        for (int i=0;i<Math.sqrt(times.get(0));i+=timeStep){
+        else {
+            if (CurrentPos.getX() > 0)
+                v = vForce;
+            else
+                v = -vForce;
+        }
+        //old
+        double time_halfway = Math.sqrt(Math.abs(reqTheta) / Math.abs(v));
 
-            //updating the current position and current velocity
-            currentPos = currentPos.add(currentVel.mul(timeStep));
-            currentVel = currentVel.add(currentAcc.mul(timeStep));
-        
-            // updating acceleration
-            currentAcc.setX();
+        for (double i = 0; i <= time_halfway; i += timeStep) {
+            setAcc();
+            update();
+        }
+        v = -v;
+
+        for (double i = 0; i <= time_halfway; i += timeStep) {
+            setAcc();
+            update();
         }
 
     }
 
-    public void distanceToLandingPos(){
-        distance = Math.pow(Math.pow(currentPos.getX(), 2)+ Math.pow(currentPos.getY(), 2), 0.5);
+    public void fallDown() {
+        u = 0;
+        setAcc();
+        //old
+        double tFreeFall = -(-CurrentVel.getY()
+                - Math.sqrt(Math.pow(CurrentVel.getY(), 2) - 4 * g / 2.0 * (-1 / 4.0) * CurrentPos.getY())) / g;
+
+        for (double i = 0; i <= tFreeFall; i += timeStep) {
+            update();
+        }
+
+        CurrentAcce.setY(Math.pow(CurrentVel.getY(), 2) / (2 * CurrentPos.getY()));
+        double timeNeeded = Math.abs(CurrentVel.getY() / CurrentAcce.getY());
+
+        for (double i = 0; i <= timeNeeded; i += timeStep) {
+            update();
+        }
+
+        System.out.println("X:" + CurrentPos.getX());
+        System.out.println("Y:" + CurrentPos.getY());
+        System.out.println("Z:" + CurrentPos.getZ());
+
     }
 
+    public void update() {
+        CurrentPos = (Vector3d) CurrentPos.addMul(timeStep, CurrentVel);
+        CurrentVel = (Vector3d) CurrentVel.addMul(timeStep, CurrentAcce);
+    }
 
+    public void setAcc() {
+        CurrentAcce.setX(Math.sin(CurrentPos.getZ()) * u);
+        CurrentAcce.setY(Math.cos(CurrentPos.getZ()) * u - g);
+        CurrentAcce.setZ(v);
+    }
 
+    public static void main(String[] args) {
+
+        OpenController con = new OpenController(new Vector3d(5000, 100000, 0), new Vector3d(), new Vector3d());
+
+    }
 }
