@@ -2,9 +2,10 @@ package titan.ode;
 
 import titan.*;
 import titan.mathematical.structures.Vector3d;
-import titan.mathematical.structures.Vector3dInterface;
 import titan.universe.State;
 import titan.universe.Universe;
+import titan.mathematical.structures.Vector3dInterface;
+
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -22,11 +23,10 @@ public class ODEComparison {
 
         State lastSate;
 
-        ODEEuler euler = new ODEEuler();
-        ODERungeKutta runge = new ODERungeKutta();
-        ODEVerlet verlet = new ODEVerlet();
-        ODEVerletModified verlet_modified = new ODEVerletModified();
-        ODEAdaptiveSolver adaptive = new ODEAdaptiveSolver();
+        ODESolverInterface euler = new ODEEuler();
+        ODESolverInterface runge = new ODERungeKutta();
+        ODESolverInterface verlet = new ODEVerlet();
+        ODESolverInterface adaptive = new ODEAdaptiveSolver();
 
         double absErrorEuler;
         double relErrorEuler;
@@ -48,22 +48,22 @@ public class ODEComparison {
         FileWriter csvWriterRuntime = new FileWriter("ode_comparison_runtime.csv");
 
 
-        csvWriter.append("timestep, Euler: abs. error, Euler: rel. error, Verlet: abs. error, Verlet: rel. error, Runge-Kutta: abs. error, Runge-Kutta: rel. error, Verlet Modified: abs. error, Verlet Modified: rel. error").append("\n");
-        csvWriterRuntime.append("timestep, euler runtime, verlet runtime, runge-kutta runtime, verlet modified runtime").append("\n");
+        csvWriter.append("timestep, Euler: abs. error, Euler: rel. error, Verlet: abs. error, Verlet: rel. error, Runge-Kutta: abs. error, Runge-Kutta: rel. error, Adaptive: abs. error, Adaptive: rel. error").append("\n");
+        csvWriterRuntime.append("timestep, euler runtime, verlet runtime, runge-kutta runtime, adaptive runtime").append("\n");
 
 
-        StateInterface[] re = euler.solve(new ODEUniverseFunction(), Universe.initialState,FINAL_TIME,14);
-        lastSate = (State) re[re.length-1];
-        absErrorEuler = absError(lastSate.getPositions()[1], mercuryCoordinates);
-        relErrorEuler = relError(lastSate.getPositions()[1], mercuryCoordinates);
-        System.out.println("Absolute Error Euler's Method: " + absErrorEuler);
-        System.out.println("Relative Error Euler's Method: " + relErrorEuler);
+        //[] re = euler.solve(new ODEUniverseFunction(), Universe.initialState,FINAL_TIME,14);
+        //lastSate = (State) re[re.length-1];
+        //absErrorEuler = absError(lastSate.getPositions()[1], mercuryCoordinates);
+        //relErrorEuler = relError(lastSate.getPositions()[1], mercuryCoordinates);
+        //System.out.println("Absolute Error Euler's Method: " + absErrorEuler);
+        //System.out.println("Relative Error Euler's Method: " + relErrorEuler);
         // mod verl abs. 20 : 4.218722132580199E7
         // mod verl. abs. 15: 4.218724940217987E7
 
-        System.exit(1);
+        //System.exit(1);
 
-        for(STEP_SIZE = 600; STEP_SIZE > 60; STEP_SIZE-=60){
+        for(STEP_SIZE = 100000; STEP_SIZE > 600; STEP_SIZE-=100000){
             //if(STEP_SIZE == 6) STEP_SIZE = 1;
             //if(STEP_SIZE == 60 + 60*30) STEP_SIZE = 60*30;
 
@@ -77,7 +77,7 @@ public class ODEComparison {
             StateInterface[] resultEuler = euler.solve(new ODEUniverseFunction(), Universe.initialState,FINAL_TIME,STEP_SIZE);
             elapsed = System.currentTimeMillis()-start;
             lastSate = (State) resultEuler[resultEuler.length-1];
-            System.out.println("Runetime for Euler's Method with timestep = " + STEP_SIZE + ": " + elapsed);
+            System.out.println("Runtime for Euler's Method with step size = " + STEP_SIZE + ": " + elapsed);
             absErrorEuler = absError(lastSate.getPositions()[1], mercuryCoordinates);
             relErrorEuler = relError(lastSate.getPositions()[1], mercuryCoordinates);
             System.out.println("Absolute Error Euler's Method: " + absErrorEuler);
@@ -95,7 +95,7 @@ public class ODEComparison {
             StateInterface[] resultVerlet = verlet.solve(new ODEUniverseFunction(),Universe.initialState,FINAL_TIME,STEP_SIZE);
             elapsed = System.currentTimeMillis()-start;
             lastSate = (State) resultVerlet[resultVerlet.length-1];
-            System.out.println("Runetime for Verlet's Method with timestep = " + STEP_SIZE + ": " + elapsed);
+            System.out.println("Runtime for Verlet's Method with step size = " + STEP_SIZE + ": " + elapsed);
             absErrorVerlet = absError(lastSate.getPositions()[1], mercuryCoordinates);
             relErrorVerlet = relError(lastSate.getPositions()[1], mercuryCoordinates);
             System.out.println("Absolute Error Verlet's Method: " + absErrorVerlet);
@@ -115,7 +115,7 @@ public class ODEComparison {
             StateInterface[] resultRunge = runge.solve(new ODEUniverseFunction(),Universe.initialState,FINAL_TIME,STEP_SIZE);
             elapsed = System.currentTimeMillis()-start;
             lastSate = (State) resultRunge[resultRunge.length-1];
-            System.out.println("Runetime for Runge-Kutta's Method with timestep = " + STEP_SIZE + ": " + elapsed);
+            System.out.println("Runtime for Runge-Kutta's Method with step size = " + STEP_SIZE + ": " + elapsed);
             absErrorRunge = absError(lastSate.getPositions()[1], mercuryCoordinates);
             relErrorRunge = relError(lastSate.getPositions()[1], mercuryCoordinates);
             //absErrorRunge = 0;
@@ -132,31 +132,26 @@ public class ODEComparison {
 
             // Verlet modified
             start = System.currentTimeMillis();
-            StateInterface[] resultVerletModified = verlet_modified.solve(new ODEUniverseFunction(),Universe.initialState,FINAL_TIME,STEP_SIZE);
+            StateInterface[] resultAdaptive = adaptive.solve(new ODEUniverseFunction(),Universe.initialState,FINAL_TIME,STEP_SIZE);
             elapsed = System.currentTimeMillis()-start;
-            lastSate = (State) resultVerletModified[resultVerletModified.length-1];
-            System.out.println("Runetime for Verlet modified's Method with timestep = " + STEP_SIZE + ": " + elapsed);
+            lastSate = (State) resultAdaptive[resultAdaptive.length-1];
+            System.out.println("Runtime for Adaptive Method with step size = " + STEP_SIZE + ": " + elapsed);
             absErrorVerlet_modified = absError(lastSate.getPositions()[1], mercuryCoordinates);
             relErrorVerlet_modified = relError(lastSate.getPositions()[1], mercuryCoordinates);
-            System.out.println("Absolute Error Verlet modified's Method: " + absErrorVerlet_modified);
-            System.out.println("Relative Error Verlet modified's Method: " + relErrorVerlet_modified);
+            System.out.println("Absolute Error Adaptive Method: " + absErrorVerlet_modified);
+            System.out.println("Relative Error Adaptive Method: " + relErrorVerlet_modified);
 
 
             csvWriter.append(Double.toString(absErrorVerlet_modified)).append(",").append(Double.toString(relErrorVerlet_modified)).append(",");
             csvWriterRuntime.append(Long.toString(elapsed)).append(",");
 
 
-            System.out.println();
 
-
-            csvWriter.flush();
-            csvWriterRuntime.flush();
-
-            // //Adaptive
+            //Adaptive
             // start = System.currentTimeMillis();
-            // StateInterface[] resultAdaptive = adaptive.solve(new ODEUniverseFunction(),Universe.initialState,FINAL_TIME,STEP_SIZE);
+            // StateInterface[] resultAdaptiveSolver = adaptive.solve(new ODEUniverseFunction(),Universe.initialState,FINAL_TIME,STEP_SIZE);
             // elapsed = System.currentTimeMillis()-start;
-            // lastSate = (State) resultAdaptive[resultAdaptive.length-1];
+            // lastSate = (State) resultAdaptiveSolver[resultAdaptiveSolver.length-1];
             // System.out.println("Runetime for Adaptive Method with timestep = " + STEP_SIZE + ": " + elapsed);
             // absErrorAdaptive = absError(lastSate.getPositions()[1], mercuryCoordinates);
             // relErrorAdaptive = relError(lastSate.getPositions()[1], mercuryCoordinates);
@@ -173,6 +168,13 @@ public class ODEComparison {
 
             // csvWriter.flush();
             // csvWriterRuntime.flush();
+
+
+            System.out.println();
+
+
+            csvWriter.flush();
+            csvWriterRuntime.flush();
 
         }
 
@@ -191,3 +193,5 @@ public class ODEComparison {
     }
 
 }
+// Absolute Error Adaptive Method: 1.1740553305951491E89
+// Relative Error Adaptive Method: 1.773871541143299E78
